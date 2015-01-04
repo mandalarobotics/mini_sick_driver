@@ -48,6 +48,11 @@ class lms_socket
 public:
 
 
+    inline void debug()
+    {
+        _debug = true;
+    }
+
     lms_measurement currentMessage;
     /// method request scan in continous mode
     void requestContinousScan();
@@ -70,7 +75,7 @@ public:
 
 private:
     bool processSubMsg(std::string msg);
-
+    bool _debug;
     int searchForPhase(std::string stringPh,  std::vector<std::string> & data , int beg=0);
 
     int hexToInt(std::string hex);

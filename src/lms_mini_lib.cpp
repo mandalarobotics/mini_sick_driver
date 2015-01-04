@@ -1,5 +1,5 @@
 #include "lms_mini_lib.hpp"
-
+#include <iostream>
 using boost::asio::ip::tcp;
 
 
@@ -38,6 +38,7 @@ using boost::asio::ip::tcp;
     lms_socket::lms_socket()
         :socket(io_service)
     {
+        _debug =false;
     }
     lms_socket::~lms_socket()
     {
@@ -53,7 +54,7 @@ using boost::asio::ip::tcp;
 
     void lms_socket::readData(bool &isMeasurment)
     {
-        boost::array<char, 2048> buf;
+        boost::array<char, 4000> buf;
         boost::system::error_code error;
         int len = socket.read_some(boost::asio::buffer(buf), error);
         if (error == boost::asio::error::eof)
@@ -65,7 +66,7 @@ using boost::asio::ip::tcp;
         incommingData.append(buf.begin(), buf.begin()+len);
         size_t begin = incommingData.find_last_of(char(0x02));
         size_t end = incommingData.find_last_of(char(0x03));
-        //std::cout <<incommingData.size()<<'\n';
+        if(_debug)std::cout <<incommingData.size()<<'\n';
         if (begin!= std::string::npos && end != std::string::npos && begin < end)
         {
 
@@ -97,10 +98,11 @@ using boost::asio::ip::tcp;
     {
 
         std::vector<std::string> data;
+        if(_debug)std::cout <<"===\n";
+        if(_debug)std::cout << msg<<"\n";
         boost::split(data, msg, boost::is_any_of(" "));
         if ( data.size()>10 && data[0].compare("sSN") ==0 &&  data[1].compare("LMDscandata") ==0)
         {
-
              processMeasurment (data);
              return true;
         }
@@ -109,10 +111,13 @@ using boost::asio::ip::tcp;
 
     int lms_socket::searchForPhase(std::string stringPh,  std::vector<std::string> & data , int beg)
     {
+
+        if(_debug)std::cout << "search for: "<<stringPh <<"\n";
         for (int i = beg; i < data.size(); i++)
         {
             if (data[i].compare(stringPh) == 0)
             {
+                if(_debug)std::cout << "found "<<stringPh <<"\n";
                 return i;
             }
         }
@@ -134,6 +139,8 @@ using boost::asio::ip::tcp;
     }
     bool lms_socket::processMeasurment( std::vector<std::string> & data )
     {
+
+
         currentMessage.echoes.clear();
         currentMessage.rssis.clear();
 
@@ -161,6 +168,10 @@ using boost::asio::ip::tcp;
 
         int dOff = 18 + currentMessage._noOfEncoders*2;
         currentMessage._noOfDISTChannels = hexToInt(data[dOff]);
+
+        currentMessage._noOfRssiChannels =1;
+        if(_debug) std::cout <<"no of dist channels:"<<currentMessage._noOfDISTChannels<<"\n";
+        if(_debug)std::cout <<"no of rssi channels:"<<currentMessage._noOfRssiChannels<<"\n";
 
         if(currentMessage._noOfDISTChannels<=1)
         {
@@ -193,6 +204,39 @@ using boost::asio::ip::tcp;
             procesChannel(ch, data, "DIST5");
             currentMessage.echoes.push_back(ch);
         }
+        if(currentMessage._noOfRssiChannels<=1)
+        {
+            lms_channel ch;
+            procesChannel(ch, data, "RSSI1");
+            currentMessage.rssis.push_back(ch);
+        }
+        if(currentMessage._noOfRssiChannels<=2)
+        {
+            lms_channel ch;
+            procesChannel(ch, data, "RSSI2");
+            currentMessage.rssis.push_back(ch);
+        }
+
+        if(currentMessage._noOfRssiChannels<=3)
+        {
+            lms_channel ch;
+            procesChannel(ch, data, "RSSI3");
+            currentMessage.rssis.push_back(ch);
+        }
+
+        if(currentMessage._noOfRssiChannels<=4)
+        {
+            lms_channel ch;
+            procesChannel(ch, data, "RSSI4");
+            currentMessage.rssis.push_back(ch);
+        }
+
+        if(currentMessage._noOfRssiChannels<=5)
+        {
+            lms_channel ch;
+            procesChannel(ch, data, "RSSI5");
+            currentMessage.rssis.push_back(ch);
+        }
 
 
     }
@@ -208,6 +252,8 @@ using boost::asio::ip::tcp;
        ch.numberOfData = hexToInt(data[offset+5]);
        if (ch.numberOfData+offset>data.size()) throw "apocalypse!";
        ch.data.resize(ch.numberOfData);
+
+       if(_debug)std::cout << channelName<<" size:"<<ch.numberOfData <<"\n";
        for(int i=0; i <ch.numberOfData; i++ )
        {
            ch.data[i] = hexToInt(data[offset+6+i]);

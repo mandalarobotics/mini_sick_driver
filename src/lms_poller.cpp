@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     ros::Publisher laser_pub = n.advertise<sensor_msgs::LaserScan>("laserScan",1);
     lms_socket LMS;
 
-    std::string ip = "192.168.0.205";
+    std::string ip = "192.168.0.201";
     if (!n.getParam("ip", ip))
     {
         ROS_FATAL("what is laser ip? set ~/ip!!");
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     if (!n.getParam("frame_id", frame_id));
 
     ROS_INFO("Will connect to laser '%s' and publish measurment with frame '%s'",ip.c_str() ,frame_id.c_str());
-    double   rate =500;
+    double   rate =350;
 
 	bool make_invert = false;
     if (invert)
@@ -67,6 +67,8 @@ int main(int argc, char **argv)
             if (LMS.currentMessage.echoes.size()>0)
             {
                 lms_channel* dist1 = &(LMS.currentMessage.echoes[0]);
+                lms_channel* intens = NULL;
+                if (LMS.currentMessage.rssis.size()>0)intens= &(LMS.currentMessage.rssis[0]);
                 scan.header.stamp = ros::Time::now();
                 scan.angle_increment = dist1->angStepWidth*M_PI/180;
                 scan.angle_min = degreesToRadians(-135.0f);
@@ -74,25 +76,53 @@ int main(int argc, char **argv)
                 scan.range_min =0.0;
                 scan.range_max =100.0;
                 scan.ranges.resize(dist1->data.size());
-		double scale = 0.001*dist1->scallingFactor;
-		if (!make_invert)
-		{
-                for (int i=0; i< dist1->data.size(); i++)
+
+                if (intens)
                 {
-                    scan.ranges[i] = scale*dist1->data[i];
+                    scan.intensities.resize(intens->data.size());
                 }
-			}else
-			{
-				for (int i=0; i< dist1->data.size(); i++)
+                double scale = 0.001*dist1->scallingFactor;
+
+                if (!make_invert)
                 {
-                    scan.ranges[dist1->data.size()-1-i] = scale*dist1->data[i];
+                        for (int i=0; i< dist1->data.size(); i++)
+                        {
+                            scan.ranges[i] = scale*dist1->data[i];
+
+                        }
                 }
-			}
+                else
+                {
+                        for (int i=0; i< dist1->data.size(); i++)
+                        {
+                            scan.ranges[dist1->data.size()-1-i] = scale*dist1->data[i];
+                        }
+                }
+
+                if (intens)
+                {
+                    if (!make_invert)
+                    {
+                            for (int i=0; i< intens->data.size(); i++)
+                            {
+                                scan.intensities[i] = intens->data[i];
+
+                            }
+                    }
+                    else
+                    {
+                            for (int i=0; i< intens->data.size(); i++)
+                            {
+                                scan.intensities[dist1->data.size()-1-i] = intens->data[i];
+                            }
+                    }
+                }
+
                 laser_pub.publish(scan);
-                 ros::spinOnce();
-                 r.sleep();
-            }
-        }
+                ros::spinOnce();
+                r.sleep();
+                }
+          }
 
     }
 
