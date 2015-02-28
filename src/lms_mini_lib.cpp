@@ -75,7 +75,7 @@ using boost::asio::ip::tcp;
 
             incommingData.clear();
         }
-        if (incommingData.size()>10000)
+        if (incommingData.size()>100000)
         {
             std::cerr<<"overflow warning \n";
             incommingData.clear();
