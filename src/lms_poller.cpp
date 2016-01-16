@@ -26,9 +26,12 @@ int main(int argc, char **argv)
 
     std::string frame_id = "laser";
     bool invert;
-
+    double startAngle = -95.0f;
     n.getParam("inv", invert);
     ROS_INFO("invert: %d",invert);
+    n.getParam("sa", startAngle);
+    ROS_INFO("sa: %f",startAngle);
+
     if (!n.getParam("frame_id", frame_id));
 
     ROS_INFO("Will connect to laser '%s' and publish measurment with frame '%s'",ip.c_str() ,frame_id.c_str());
@@ -71,8 +74,8 @@ int main(int argc, char **argv)
                 if (LMS.currentMessage.rssis.size()>0)intens= &(LMS.currentMessage.rssis[0]);
                 scan.header.stamp = ros::Time::now();
                 scan.angle_increment = dist1->angStepWidth*M_PI/180;
-                scan.angle_min = degreesToRadians(-95.0f);
-                scan.angle_max = degreesToRadians(95.0f);
+                scan.angle_min = degreesToRadians(startAngle);
+                scan.angle_max = degreesToRadians(-startAngle);
                 scan.range_min =0.0;
                 scan.range_max =100.0;
                 scan.ranges.resize(dist1->data.size());
